@@ -1,4 +1,3 @@
-#![allow(unused)]
 //! Spawn two workers that play some ping-pong
 
 use ockam::{Address, Context, Result, Worker};
@@ -29,7 +28,7 @@ fn main() {
             counter: 0,
         };
         let address: Address = "initiator".into();
-        ctx.start_worker(address, player);
+        ctx.start_worker(address, player).await.unwrap();
         println!("initiator started");
         ctx.send_message(
             "initiator",

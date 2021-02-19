@@ -32,10 +32,8 @@ impl Worker for Player {
     }
 
     async fn handle_message(&mut self, ctx: &mut Self::Context, msg: Self::Message) -> Result<()> {
-        println!("got message {:?}", msg);
         match msg {
             PlayerMessage::Serve(r) => {
-                println!("SERVE");
                 let m = RouterMessage {
                     version: 1,
                     onward_route: r,
@@ -53,16 +51,14 @@ impl Worker for Player {
                     .unwrap();
             }
             PlayerMessage::Return => {
-                println!("RETURN");
                 let m = self.connection.receive_message().await.unwrap();
-                println!("TCP: {}", String::from_utf8(m.payload).unwrap());
+                println!("{}", String::from_utf8(m.payload).unwrap());
                 self.return_route = m.return_route.clone();
                 ctx.send_message(ctx.address(), PlayerMessage::Hit)
                     .await
                     .unwrap();
             }
             PlayerMessage::Hit => {
-                println!("HIT");
                 let m = RouterMessage {
                     version: 1,
                     onward_route: self.return_route.clone(),
@@ -79,6 +75,10 @@ impl Worker for Player {
                     .await
                     .unwrap();
             }
+        }
+        self.counter += 1;
+        if self.counter == 10 {
+            ctx.stop().await.unwrap();
         }
         Ok(())
     }

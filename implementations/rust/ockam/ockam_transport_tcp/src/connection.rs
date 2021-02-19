@@ -564,10 +564,10 @@ mod test {
         assert!(connection.is_ok());
         let mut connection = connection.unwrap();
 
-        let mut messages = get_messages();
+        let messages = get_messages();
 
         // expect 2 messages, each with 32-byte payload
-        for mut msg in messages.iter() {
+        for msg in messages.iter() {
             let mut msg = msg.clone();
             msg.onward_route.addrs.remove(0);
             match connection.receive_message().await {

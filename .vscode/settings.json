@@ -12,6 +12,7 @@
         "implementations/rust/ockam/ockam_sync_std/Cargo.toml",
         "implementations/rust/ockam/ockam_transport/Cargo.toml",
         "implementations/rust/ockam/ockam_transport_tcp/Cargo.toml",
+        "implementations/rust/ockam/ockam_transport_websocket/Cargo.toml",
         "implementations/rust/ockam/ockam_vault/Cargo.toml",
         "implementations/rust/ockam/ockam_vault_core/Cargo.toml"
     ]

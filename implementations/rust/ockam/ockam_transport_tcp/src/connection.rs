@@ -1,5 +1,5 @@
-use crate::error::TransportError;
-use crate::transport_traits::Connection;
+use ockam_transport::error::TransportError;
+use ockam_transport::traits::Connection;
 use async_trait::async_trait;
 use ockam_core::lib::convert::TryInto;
 use ockam_core::lib::str::FromStr;

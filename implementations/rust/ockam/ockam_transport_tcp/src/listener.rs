@@ -1,5 +1,5 @@
-use crate::error::TransportError;
-use crate::transport_traits::{Connection, Listener};
+use ockam_transport::error::TransportError;
+use ockam_transport::traits::{Connection, Listener};
 use crate::TcpConnection;
 use async_trait::async_trait;
 use tokio::net::TcpListener as TokioTcpListener;

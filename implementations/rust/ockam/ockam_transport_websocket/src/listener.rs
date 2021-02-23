@@ -1,4 +1,6 @@
 use crate::connection::WebSocketConnection;
+use ockam_transport::{Connection, Listener, TransportError};
+use async_trait::async_trait;
 use async_tungstenite::tokio::*;
 use tokio::net::{TcpListener, ToSocketAddrs};
 
@@ -7,17 +9,20 @@ pub struct WebSocketListener {
 }
 
 impl WebSocketListener {
-    pub async fn bind<A>(addr: A) -> Result<Self, String>
+    pub async fn bind<A>(addr: A) -> Result<Self, TransportError>
         where A: ToSocketAddrs,
     {
-        let listener = TcpListener::bind(addr).await.map_err(|e| e.to_string())?;
+        let listener = TcpListener::bind(addr).await.map_err(|_| TransportError::Bind)?;
         Ok(WebSocketListener { listener })
     }
+}
 
-    pub async fn accept(&mut self) -> Result<WebSocketConnection, String> {
-        let (stream, _addr) = self.listener.accept().await.map_err(|e| e.to_string())?;
-        let ws_stream = accept_async(stream).await.map_err(|e| e.to_string())?;
-        Ok(WebSocketConnection::from_stream(ws_stream))
+#[async_trait]
+impl Listener for WebSocketListener {
+    async fn accept(&mut self) -> Result<Box<dyn Connection + Send>, TransportError> {
+        let (stream, _addr) = self.listener.accept().await.map_err(|_| TransportError::Accept)?;
+        let ws_stream = accept_async(stream).await.map_err(|_| TransportError::Accept)?;
+        Ok(Box::new(WebSocketConnection::from_stream(ws_stream).unwrap() /*XXX */))
     }
 }
 
@@ -25,6 +30,7 @@ impl WebSocketListener {
 mod test {
     use crate::connection::WebSocketConnection;
     use crate::listener::WebSocketListener;
+    use ockam_transport::{Connection, Listener};
     use tokio::runtime::Builder;
     use tokio::task;
 
@@ -36,7 +42,8 @@ mod test {
 
         // Spawn a client to connect to it
         let client_task = task::spawn(async {
-            WebSocketConnection::connect("ws://localhost:8080/").await.unwrap();
+            let mut client = WebSocketConnection::new("ws://localhost:8080/").unwrap();
+            client.connect().await.unwrap();
         });
 
         let (r1, r2) = tokio::join!(server_task, client_task);
@@ -55,7 +62,8 @@ mod test {
 
         // Spawn a client to connect to it
         let client_task = task::spawn(async {
-            let mut ws_conn = WebSocketConnection::connect("ws://localhost:8081/").await.unwrap();
+            let mut ws_conn = WebSocketConnection::new("ws://localhost:8081/").unwrap();
+            ws_conn.connect().await.unwrap();
             let msg = b"Hello World!";
             ws_conn.send(msg).await.unwrap();
             let mut buf = [0; 256];

@@ -6,6 +6,7 @@ use ockam_core::Error;
 pub enum TransportError {
     None,
     PeerNotFound,
+    InvalidPeer,
     Accept,
     Bind,
     AlreadyConnected,

@@ -1,66 +1,102 @@
-use async_tungstenite::{WebSocketStream, tungstenite::{Message, client}};
+use ockam_router::message::{RouterAddress, RouterMessage};
+use ockam_transport::{Connection, TransportError};
+use async_trait::async_trait;
+use async_tungstenite::{WebSocketStream, tungstenite::Message};
 use async_tungstenite::tokio::*;
 use futures::prelude::*;
+use url::Url;
 
 pub struct WebSocketConnection {
-    ws_stream: WebSocketStream<ConnectStream>,
+    remote_address: Option<Url>,
+    ws_stream: Option<WebSocketStream<ConnectStream>>,
 }
 
 impl WebSocketConnection {
-    /// Creates a new [`WebSocketConnection`] object to initiate a WebSocket connection
-    /// to the given URL.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// use ockam_transport_websocket::connection::WebSocketConnection;
-    ///
-    /// ```
-    pub async fn connect<R>(request: R) -> Result<Self, String>
-    where
-        R: client::IntoClientRequest + Unpin,
-    {
-        let (ws_stream, _) = connect_async(request).await.map_err(|e| e.to_string())?;
-        Ok(WebSocketConnection { ws_stream })
+    pub fn new(remote_address: &str) -> Result<Self, TransportError> {
+        Ok(WebSocketConnection {
+            remote_address: Some(remote_address.parse().map_err(|_| TransportError::InvalidPeer)?),
+            ws_stream: None
+        })
     }
 
-    pub fn from_stream(ws_stream: WebSocketStream<ConnectStream>) -> Self {
-        WebSocketConnection { ws_stream }
-    }
-
-    pub async fn send(&mut self, buf: &[u8]) -> Result<usize, String> {
-        // Note: inefficient
-        self.ws_stream.send(Message::binary(buf)).await.map_err(|e| e.to_string())?;
-        Ok(buf.len())
-    }
-
-    pub async fn receive(&mut self, buf: &mut [u8]) -> Result<usize, String> {
-        if let Some(read) = self.ws_stream.next().await {
-            let msg = read.map_err(|e| e.to_string())?;
-            if !msg.is_binary() {
-                return Err("invalid message type".to_string());
-            }
-
-            let msg_len = msg.len();
-            if msg_len > buf.len() {
-                return Err("buffer too small".to_string());
-            }
-            buf[..msg_len].copy_from_slice(&msg.into_data());
-
-            return Ok(msg_len);
-        }
-
-        // Is reading nothing an error or alright?
-        Ok(0)
+    pub fn from_stream(ws_stream: WebSocketStream<ConnectStream>) -> Result<Self, TransportError> {
+        Ok(WebSocketConnection {
+            remote_address: None,
+            ws_stream: Some(ws_stream)
+        })
     }
 }
+
+#[async_trait]
+impl Connection for WebSocketConnection {
+    async fn connect(&mut self) -> Result<(), TransportError> {
+        self.ws_stream = Some(connect_async(self.remote_address.as_ref().ok_or(TransportError::InvalidPeer)?.as_str())
+            .await
+            .map_err(|_| TransportError::ConnectFailed)?
+            .0);
+        Ok(())
+    }
+
+    async fn send(&mut self, buf: &[u8]) -> Result<usize, TransportError> {
+        // Note: inefficient
+        if let Some(ref mut stream) = self.ws_stream {
+            stream.send(Message::binary(buf)).await.map_err(|_| TransportError::CheckConnection)?;
+            Ok(buf.len())
+        } else {
+            Err(TransportError::NotConnected)
+        }
+    }
+
+    async fn receive(&mut self, buf: &mut [u8]) -> Result<usize, TransportError> {
+        if let Some(ref mut stream) = self.ws_stream {
+            if let Some(read) = stream.next().await {
+                let msg = read.map_err(|_| TransportError::ReceiveFailed)?;
+                if !msg.is_binary() {
+                    return Err(TransportError::IllFormedMessage);
+                }
+
+                let msg_len = msg.len();
+                if msg_len >= buf.len() {
+                    return Err(TransportError::BufferTooSmall);
+                }
+                buf[..msg_len].copy_from_slice(&msg.into_data());
+
+                Ok(msg_len)
+            } else {
+                Err(TransportError::ConnectionClosed)
+            }
+        } else {
+            Err(TransportError::NotConnected)
+        }
+    }
+
+    async fn send_message(&mut self, _msg: RouterMessage) -> Result<usize, TransportError> {
+        todo!()
+    }
+
+    async fn receive_message(&mut self) -> Result<RouterMessage, TransportError> {
+        todo!()
+    }
+
+    fn get_local_address(&self) -> RouterAddress {
+        todo!()
+    }
+
+    fn get_remote_address(&self) -> RouterAddress {
+        todo!()
+    }
+}
+
 
 #[cfg(test)]
 mod test {
     use crate::connection::WebSocketConnection;
+    use ockam_transport::Connection;
     use tokio::runtime::Builder;
 
     async fn echo_test() {
-        let mut connection = WebSocketConnection::connect("ws://echo.websocket.org").await.unwrap();
+        let mut connection = WebSocketConnection::new("ws://echo.websocket.org").unwrap();
+        connection.connect().await.unwrap();
 
         let message = b"Hello World!";
         connection.send(message).await.expect("failed to send");

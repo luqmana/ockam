@@ -1,7 +1,7 @@
+use ockam_transport::error::TransportError;
+use ockam_transport::traits::Connection;
 use ockam_transport_tcp::connection::TcpConnection;
-use ockam_transport_tcp::error::TransportError;
 use ockam_transport_tcp::listener::TcpListener;
-use ockam_transport_tcp::transport_traits::Connection;
 use rand::prelude::*;
 use std::net::SocketAddr;
 use std::str::FromStr;
@@ -31,7 +31,7 @@ pub async fn random_worker(mut c: Box<dyn Connection>, text: &str) {
                     }
                     Err(e) => {
                         if !matches!(e, TransportError::ConnectionClosed) {
-                            panic!(format!("{:?}", e));
+                            panic!("{:?}", e);
                         }
                         return;
                     }
@@ -64,7 +64,7 @@ pub fn test_message_send() {
 
             let f2 = m_listener.accept();
             let (r1, r2) = tokio::join!(f1, f2);
-            assert!(r1.is_ok(), r2.is_ok());
+            assert!(r1.is_ok() && r2.is_ok());
             r2.unwrap()
         };
 

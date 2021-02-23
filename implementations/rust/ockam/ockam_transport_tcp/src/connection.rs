@@ -361,7 +361,7 @@ mod test {
                 );
             }
             Err(e) => {
-                panic!(format!("{:?}", e));
+                panic!("{:?}", e);
             }
         }
     }
@@ -459,7 +459,7 @@ mod test {
                 );
             }
             Err(e) => {
-                panic!(format!("{:?}", e));
+                panic!("{:?}", e);
             }
         }
     }
@@ -575,7 +575,7 @@ mod test {
                     assert_eq!(m, msg);
                 }
                 Err(e) => {
-                    panic!(format!("{:?}", e));
+                    panic!("{:?}", e);
                 }
             }
         }

@@ -3,9 +3,11 @@ use ockam_transport::{Connection, Listener, TransportError};
 use async_trait::async_trait;
 use async_tungstenite::tokio::*;
 use tokio::net::{TcpListener, ToSocketAddrs};
+use url::Url;
 
 pub struct WebSocketListener {
     listener: TcpListener,
+    local_address: Url,
 }
 
 impl WebSocketListener {
@@ -13,7 +15,11 @@ impl WebSocketListener {
         where A: ToSocketAddrs,
     {
         let listener = TcpListener::bind(addr).await.map_err(|_| TransportError::Bind)?;
-        Ok(WebSocketListener { listener })
+        let local_address = listener.local_addr().map_err(|_| TransportError::Bind)?;
+        // TODO: This doesn't deal well with TLS or servers that rely on hostname to distinguish multiple servers listening on the same ip
+        let local_address = format!("ws://{}:{}/", local_address.ip(), local_address.port());
+        let local_address = local_address.parse().map_err(|_| TransportError::InvalidPeer)?;
+        Ok(WebSocketListener { local_address, listener })
     }
 }
 
@@ -22,7 +28,7 @@ impl Listener for WebSocketListener {
     async fn accept(&mut self) -> Result<Box<dyn Connection + Send>, TransportError> {
         let (stream, _addr) = self.listener.accept().await.map_err(|_| TransportError::Accept)?;
         let ws_stream = accept_async(stream).await.map_err(|_| TransportError::Accept)?;
-        Ok(Box::new(WebSocketConnection::from_stream(ws_stream).unwrap() /*XXX */))
+        Ok(Box::new(WebSocketConnection::from_stream(self.local_address.as_str(), ws_stream)?))
     }
 }
 

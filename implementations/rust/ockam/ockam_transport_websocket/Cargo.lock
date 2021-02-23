@@ -425,6 +425,7 @@ dependencies = [
  "futures",
  "ockam_router",
  "ockam_transport",
+ "serde_bare",
  "tokio",
  "trybuild",
  "url",

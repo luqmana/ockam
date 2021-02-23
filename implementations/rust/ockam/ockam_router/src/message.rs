@@ -17,6 +17,11 @@ pub const ROUTER_MSG_PAYLOAD: u8 = 2;
 
 pub const ROUTER_ADDRESS_LOCAL: Uint = serde_bare::Uint(0);
 pub const ROUTER_ADDRESS_TCP: Uint = serde_bare::Uint(1);
+pub const ROUTER_ADDRESS_WEBSOCKET: Uint = serde_bare::Uint(2);
+
+// todo - revisit these values
+pub const MAX_MESSAGE_SIZE: usize = 2048;
+pub const DEFAULT_TCP_ADDRESS: &str = "127.0.0.1:4050";
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[repr(C)]

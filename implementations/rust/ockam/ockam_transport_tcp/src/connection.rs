@@ -3,15 +3,12 @@ use ockam_transport::traits::Connection;
 use async_trait::async_trait;
 use ockam_core::lib::convert::TryInto;
 use ockam_core::lib::str::FromStr;
-use ockam_router::message::{RouterAddress, RouterMessage, ROUTER_ADDRESS_TCP};
+use ockam_router::message::{DEFAULT_TCP_ADDRESS, MAX_MESSAGE_SIZE, RouterAddress, RouterMessage, ROUTER_ADDRESS_TCP};
 use std::net::SocketAddr;
 use std::result::Result;
 use tokio::io;
 use tokio::net::TcpStream;
 
-// todo - revisit these values
-const MAX_MESSAGE_SIZE: usize = 2048;
-const DEFAULT_TCP_ADDRESS: &str = "127.0.0.1:4050";
 
 pub struct TcpConnection {
     remote_address: std::net::SocketAddr,
